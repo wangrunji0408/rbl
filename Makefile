@@ -1,6 +1,6 @@
 arch := riscv32
-kernel := target/$(arch)/debug/rbl
-payload := ../rcore_plus_lab/kernel/target/$(arch)/debug/rcore
+target := riscv32i-unknown-none-elf
+kernel := target/$(target)/release/rbl
 qemu-opts := \
 		-smp cores=1 \
 		-machine virt \
@@ -9,17 +9,10 @@ qemu-opts := \
 
 .PHONY: build run debug $(kernel)
 
-payload: $(payload)
-	cp $(payload) payload
-
-$(kernel): payload
-	@cargo xbuild --target=$(arch).json
+$(kernel):
+	cargo build --release
 
 build: $(kernel)
 
 run: build
-	@qemu-system-$(arch) $(qemu-opts)
-
-debug: build
-	@tmux split-window "sleep 1 && rust-gdb $(kernel) -x gdbinit"
-	@qemu-system-$(arch) $(qemu-opts) -s -S
+	qemu-system-$(arch) $(qemu-opts)

@@ -67,7 +67,7 @@ pub extern "C" fn trap_handler(
             pc += 4;
         }
         _ => unimplemented!(
-            "cause {} with epc {:#X} tval {:#X} trapframe {:x?}",
+            "cause {} with epc {:#X} tval {:#X} trapframe {:#x?}",
             cause,
             pc,
             tval,

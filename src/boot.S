@@ -35,8 +35,7 @@ boot:
     li x31, 0
     csrw mscratch, x0
 
-    lui t0, %hi(trap_vector)
-    addi t0, t0, %lo(trap_vector)
+    la t0, trap_vector
     csrw mtvec, t0
 
     # ensure mtvec is set correctly
@@ -45,10 +44,7 @@ try:
     bne t0, t1, try
 
     # setup boot stack space
-    add t0, a0, 1
-    slli t0, t0, 16
-    lui sp, %hi(bootstack)
-    add sp, sp, t0
+    la sp, bootstacktop
 
     # save sp to mscratch
     csrw mscratch, sp
@@ -64,9 +60,7 @@ other_hart:
 
 .section .bss.stack
 .align 12 # PAGE_SIZE
-.global bootstack
 bootstack:
-    # 8 * 64KB stack
-    .space 1024 * 64 * 8
-.global bootstacktop
+    # 4KB stack
+    .space 0x1000
 bootstacktop:
