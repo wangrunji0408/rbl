@@ -1,6 +1,6 @@
 use riscv::register::{
     mcause::{self, *},
-    mepc, mtval,
+    mepc, mhartid, mtval,
 };
 
 #[repr(C)]
@@ -57,7 +57,7 @@ pub extern "C" fn trap_handler(tf: &mut TrapFrame) -> usize {
             let arg3 = tf.x12; // a2
 
             let ret = match which {
-                0 => sbi_set_timer(arg1),
+                0 => sbi_set_timer(((arg2 as u64) << 32) | arg1 as u64),
                 1 => sbi_console_putchar(arg1),
                 2 => sbi_console_getchar(),
                 3 => sbi_clear_ipi(),
@@ -72,6 +72,9 @@ pub extern "C" fn trap_handler(tf: &mut TrapFrame) -> usize {
             // return code at a0
             tf.x10 = ret;
         }
+        Trap::Interrupt(Interrupt::MachineTimer) => {
+            todo!("handle timer");
+        }
         _ => unimplemented!(
             "trap: mcause={:?}, mepc={:#x}, mtval={:#x}\n{:#x?}",
             mcause,
@@ -83,14 +86,14 @@ pub extern "C" fn trap_handler(tf: &mut TrapFrame) -> usize {
     mepc
 }
 
-fn sbi_set_timer(time: usize) -> usize {
-    // do nothing
-    println!("sbi: set timer {}", time);
+fn sbi_set_timer(time: u64) -> usize {
+    const CLINT_ADDR: usize = 0x2000000;
+    let mut clint = crate::clint::Clint::new(CLINT_ADDR as _);
+    clint.set_timer(mhartid::read(), time);
     0
 }
 
 fn sbi_console_putchar(ch: usize) -> usize {
-    // do nothing
     print!("{}", ch as u8 as char);
     0
 }
