@@ -1,6 +1,6 @@
 use riscv::register::{
     mcause::{self, *},
-    mepc, mhartid, mtval,
+    mepc, mhartid, mie, mip, mtval,
 };
 
 #[repr(C)]
@@ -49,7 +49,7 @@ pub extern "C" fn trap_handler(tf: &mut TrapFrame) -> usize {
     let mut mepc = mepc::read();
 
     match mcause {
-        Trap::Exception(Exception::MachineEnvCall) => {
+        Trap::Exception(Exception::SupervisorEnvCall) => {
             // arguments
             let which = tf.x17; // a7
             let arg1 = tf.x10; // a0
@@ -72,9 +72,10 @@ pub extern "C" fn trap_handler(tf: &mut TrapFrame) -> usize {
             // return code at a0
             tf.x10 = ret;
         }
-        Trap::Interrupt(Interrupt::MachineTimer) => {
-            todo!("handle timer");
-        }
+        Trap::Interrupt(Interrupt::MachineTimer) => unsafe {
+            mie::clear_mtimer();
+            mip::set_stimer();
+        },
         _ => unimplemented!(
             "trap: mcause={:?}, mepc={:#x}, mtval={:#x}\n{:#x?}",
             mcause,
@@ -90,6 +91,10 @@ fn sbi_set_timer(time: u64) -> usize {
     const CLINT_ADDR: usize = 0x2000000;
     let mut clint = crate::clint::Clint::new(CLINT_ADDR as _);
     clint.set_timer(mhartid::read(), time);
+    unsafe {
+        mie::set_mtimer();
+        mip::clear_stimer();
+    }
     0
 }
 
