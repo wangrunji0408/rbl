@@ -1,3 +1,8 @@
+use riscv::register::{
+    mcause::{self, *},
+    mepc, mtval,
+};
+
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct TrapFrame {
@@ -38,22 +43,20 @@ pub struct TrapFrame {
 /// Trap handler
 /// Return the new epc
 #[no_mangle]
-pub extern "C" fn trap_handler(
-    tf: &mut TrapFrame,
-    cause: usize,
-    mut pc: usize,
-    tval: usize,
-) -> usize {
-    match cause {
-        11 => {
-            // sbi
+pub extern "C" fn trap_handler(tf: &mut TrapFrame) -> usize {
+    let mcause = mcause::read().cause();
+    let mtval = mtval::read();
+    let mut mepc = mepc::read();
+
+    match mcause {
+        Trap::Exception(Exception::MachineEnvCall) => {
+            // arguments
             let which = tf.x17; // a7
             let arg1 = tf.x10; // a0
             let arg2 = tf.x11; // a1
             let arg3 = tf.x12; // a2
 
-            // return code at a0
-            tf.x10 = match which {
+            let ret = match which {
                 0 => sbi_set_timer(arg1),
                 1 => sbi_console_putchar(arg1),
                 2 => sbi_console_getchar(),
@@ -65,18 +68,19 @@ pub extern "C" fn trap_handler(
             };
 
             // skip ecall instruction
-            pc += 4;
+            mepc += 4;
+            // return code at a0
+            tf.x10 = ret;
         }
         _ => unimplemented!(
-            "trap: mcause={}, epc={:#x}, mtval={:#x}\n{:#x?}",
-            cause,
-            pc,
-            tval,
+            "trap: mcause={:?}, mepc={:#x}, mtval={:#x}\n{:#x?}",
+            mcause,
+            mepc,
+            mtval,
             tf
         ),
     }
-
-    pc
+    mepc
 }
 
 fn sbi_set_timer(time: usize) -> usize {

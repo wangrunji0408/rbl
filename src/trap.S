@@ -45,18 +45,14 @@ trap_vector:
 
     # args
     mv a0, sp
-    csrr a1, mcause
-    csrr a2, mepc
-    csrr a3, mtval
-
     jal trap_handler
 
     # update mepc
     csrw mepc, a0
 
     # save sp to mscratch, so we know kernel sp on next trap
-    addi sp, sp, 32*4
-    csrw mscratch, sp
+    addi t0, sp, 32*4
+    csrw mscratch, t0
 
     lw x1, 1*4(sp)
     # x2 is sp, restore it later
