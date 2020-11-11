@@ -1,5 +1,5 @@
 use core::fmt::{Arguments, Error, Write};
-use volatile::{ReadOnly, WriteOnly};
+use volatile::*;
 
 const UART_ADDR: usize = 0x10000000;
 
@@ -17,7 +17,7 @@ bitflags::bitflags! {
 
 #[repr(C)]
 struct Uart16550 {
-    dll: WriteOnly<u8>,
+    dll: ReadWrite<u8>,
     dlm: WriteOnly<u8>,
     fcr: WriteOnly<u8>,
     lcr: WriteOnly<u8>,
@@ -33,6 +33,10 @@ impl Uart16550 {
         }
         self.dll.write(ch);
     }
+
+    fn getc(&mut self) -> u8 {
+        self.dll.read()
+    }
 }
 
 impl Write for Uart16550 {
@@ -47,6 +51,11 @@ impl Write for Uart16550 {
 pub fn print(args: Arguments) {
     let serial = unsafe { &mut *(UART_ADDR as *mut Uart16550) };
     serial.write_fmt(args).unwrap();
+}
+
+pub fn getchar() -> u8 {
+    let serial = unsafe { &mut *(UART_ADDR as *mut Uart16550) };
+    serial.getc()
 }
 
 #[macro_export]
