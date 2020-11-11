@@ -34,8 +34,12 @@ impl Uart16550 {
         self.dll.write(ch);
     }
 
-    fn getc(&mut self) -> u8 {
-        self.dll.read()
+    fn getc(&mut self) -> Option<u8> {
+        if self.lsr.read().contains(LineStatusRegister::DR) {
+            Some(self.dll.read())
+        } else {
+            None
+        }
     }
 }
 
@@ -53,7 +57,7 @@ pub fn print(args: Arguments) {
     serial.write_fmt(args).unwrap();
 }
 
-pub fn getchar() -> u8 {
+pub fn getchar() -> Option<u8> {
     let serial = unsafe { &mut *(UART_ADDR as *mut Uart16550) };
     serial.getc()
 }

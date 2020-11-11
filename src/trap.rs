@@ -104,7 +104,10 @@ fn sbi_console_putchar(ch: usize) -> usize {
 }
 
 fn sbi_console_getchar() -> usize {
-    crate::serial::getchar() as usize
+    match crate::serial::getchar() {
+        Some(c) => c as usize,
+        None => usize::max_value(),
+    }
 }
 
 fn sbi_clear_ipi() -> usize {

@@ -24,7 +24,7 @@ pub unsafe extern "C" fn boot_first_hart(hartid: usize, dtb: usize) -> ! {
     println!("Welcome to Rust Boot Loader!");
 
     // enter supervisor mode
-    let entry: usize = 0x80010000;
+    let entry: usize = 0x80400000;
     println!(
         "Going to supervisor mode: entry={:#x}, hartid={}, dtb={:#x}",
         entry, hartid, dtb
