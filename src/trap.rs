@@ -1,44 +1,45 @@
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct TrapFrame {
-    x31: usize, // t6
-    x30: usize, // t5
-    x29: usize, // t4
-    x28: usize, // t3
-    x27: usize, // s11
-    x26: usize, // s10
-    x25: usize, // s9
-    x24: usize, // s8
-    x23: usize, // s7
-    x22: usize, // s6
-    x21: usize, // s5
-    x20: usize, // s4
-    x19: usize, // s3
-    x18: usize, // s2
-    x17: usize, // a7
-    x16: usize, // a6
-    x15: usize, // a5
-    x14: usize, // a4
-    x13: usize, // a3
-    x12: usize, // a2
-    x11: usize, // a1
-    x10: usize, // a0
-    x9: usize,  // s1
-    x8: usize,  // s0/fp
-    x7: usize,  // t2
-    x6: usize,  // t1
-    x5: usize,  // t0
-    x4: usize,  // tp
-    x3: usize,  // gp
-    x2: usize,  // sp
+    x0: usize,  // zero
     x1: usize,  // ra
+    x2: usize,  // sp
+    x3: usize,  // gp
+    x4: usize,  // tp
+    x5: usize,  // t0
+    x6: usize,  // t1
+    x7: usize,  // t2
+    x8: usize,  // s0/fp
+    x9: usize,  // s1
+    x10: usize, // a0
+    x11: usize, // a1
+    x12: usize, // a2
+    x13: usize, // a3
+    x14: usize, // a4
+    x15: usize, // a5
+    x16: usize, // a6
+    x17: usize, // a7
+    x18: usize, // s2
+    x19: usize, // s3
+    x20: usize, // s4
+    x21: usize, // s5
+    x22: usize, // s6
+    x23: usize, // s7
+    x24: usize, // s8
+    x25: usize, // s9
+    x26: usize, // s10
+    x27: usize, // s11
+    x28: usize, // t3
+    x29: usize, // t4
+    x30: usize, // t5
+    x31: usize, // t6
 }
 
 /// Trap handler
 /// Return the new epc
 #[no_mangle]
 pub extern "C" fn trap_handler(
-    trap_frame: &mut TrapFrame,
+    tf: &mut TrapFrame,
     cause: usize,
     mut pc: usize,
     tval: usize,
@@ -46,13 +47,13 @@ pub extern "C" fn trap_handler(
     match cause {
         11 => {
             // sbi
-            let call = trap_frame.x17; // a7
-            let arg1 = trap_frame.x10; // a0
-            let arg2 = trap_frame.x11; // a1
-            let arg3 = trap_frame.x12; // a2
+            let call = tf.x17; // a7
+            let arg1 = tf.x10; // a0
+            let arg2 = tf.x11; // a1
+            let arg3 = tf.x12; // a2
 
             // return code at a0
-            trap_frame.x10 = match call {
+            tf.x10 = match call {
                 0 => sbi_set_timer(arg1),
                 1 => sbi_console_putchar(arg1),
                 2 => sbi_console_getchar(),
@@ -71,7 +72,7 @@ pub extern "C" fn trap_handler(
             cause,
             pc,
             tval,
-            trap_frame
+            tf
         ),
     }
 
@@ -86,7 +87,6 @@ fn sbi_set_timer(time: usize) -> usize {
 
 fn sbi_console_putchar(ch: usize) -> usize {
     // do nothing
-    //println!("sbi: put char {}", ch);
     print!("{}", ch as u8 as char);
     0
 }
