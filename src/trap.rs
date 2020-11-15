@@ -1,3 +1,4 @@
+use crate::clint::Clint;
 use riscv::register::{
     mcause::{self, *},
     mepc, mhartid, mie, mip, mtval,
@@ -40,6 +41,13 @@ pub struct TrapFrame {
     x31: usize, // t6
 }
 
+impl TrapFrame {
+    fn index_mut(&mut self, rs: usize) -> &mut usize {
+        let regs: &mut [usize; 32] = unsafe { core::mem::transmute(self) };
+        &mut regs[rs]
+    }
+}
+
 /// Trap handler
 /// Return the new epc
 #[no_mangle]
@@ -76,6 +84,33 @@ pub extern "C" fn trap_handler(tf: &mut TrapFrame) -> usize {
             mie::clear_mtimer();
             mip::set_stimer();
         },
+        Trap::Exception(Exception::IllegalInstruction) => {
+            // NOTE: assume vaddr = paddr
+            let inst = unsafe { (mepc as *const u32).read() } as usize;
+            if inst & 0xFFFFF07F == 0xC0102073 {
+                // rdtime
+                let rd = (inst >> 7) & 0b1_1111;
+                let clint = Clint::new(CLINT_ADDR as _);
+                let mtime = clint.get_mtime() as usize;
+                *tf.index_mut(rd) = mtime;
+                mepc += 4;
+            } else if inst & 0xFFFFF07F == 0xC8102073 {
+                // rdtimeh
+                let rd = (inst >> 7) & 0b1_1111;
+                let clint = Clint::new(CLINT_ADDR as _);
+                let mtimeh = (clint.get_mtime() >> 32) as usize;
+                *tf.index_mut(rd) = mtimeh;
+                mepc += 4;
+            } else {
+                unimplemented!(
+                    "trap: mcause={:?}, mepc={:#x}, mtval={:#x}\n{:#x?}",
+                    mcause,
+                    mepc,
+                    mtval,
+                    tf
+                );
+            }
+        }
         _ => unimplemented!(
             "trap: mcause={:?}, mepc={:#x}, mtval={:#x}\n{:#x?}",
             mcause,
@@ -87,9 +122,10 @@ pub extern "C" fn trap_handler(tf: &mut TrapFrame) -> usize {
     mepc
 }
 
+const CLINT_ADDR: usize = 0x2000000;
+
 fn sbi_set_timer(time: u64) -> usize {
-    const CLINT_ADDR: usize = 0x2000000;
-    let mut clint = crate::clint::Clint::new(CLINT_ADDR as _);
+    let mut clint = Clint::new(CLINT_ADDR as _);
     clint.set_timer(mhartid::read(), time);
     unsafe {
         mie::set_mtimer();
