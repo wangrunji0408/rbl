@@ -52,7 +52,6 @@ pub unsafe extern "C" fn boot_first_hart(hartid: usize, dtb: usize) -> ! {
     mstatus &= !(1 << 13 | 1 << 14); // disable fs
     mstatus &= !(1 << 7); // no mpie
     mstatus |= 1 << 11; // mpp = s
-    mstatus |= 1 << 3; // mie
     llvm_asm!("csrw mstatus, $0": : "r"(mstatus) : : "volatile" );
 
     // set supervisor entry point
